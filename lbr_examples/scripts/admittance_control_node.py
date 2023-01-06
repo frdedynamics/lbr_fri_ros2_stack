@@ -66,7 +66,6 @@ class AdmittanceControlNode(Node):
         self.declare_parameter("end_link_name", "lbr_link_ee")
         self.declare_parameter("root_link_name", "lbr_link_0")
         self.declare_parameter("command_rate", 100.0)
-        self.declare_parameter("buffer_len", 20)
 
         self.model_ = str(self.get_parameter("model").value)
         self.end_link_name_ = str(self.get_parameter("end_link_name").value)
@@ -92,18 +91,15 @@ class AdmittanceControlNode(Node):
 
         # publishers and subscribers
         self.lbr_state_sub_ = self.create_subscription(
-            LBRState, "/lbr_state", self.lbr_state_cb_, qos.qos_profile_system_default
+            LBRState,
+            "/lbr_state/smooth",
+            self.lbr_state_cb_,
+            qos.qos_profile_system_default,
         )
         self.lbr_command_pub_ = self.create_publisher(
             LBRCommand, "/lbr_command", qos.qos_profile_system_default
         )
         self.lbr_command_timer_ = self.create_timer(self.dt_, self.timer_cb_)
-
-        self.joint_position_buffer_len_ = int(self.get_parameter("buffer_len").value)
-        self.joint_position_buffer_ = []
-
-        self.external_torque_buffer_len_ = int(self.get_parameter("buffer_len").value)
-        self.external_torque_buffer_ = []
 
     def lbr_state_cb_(self, msg: LBRState) -> None:
         self.lbr_state_ = msg
@@ -113,24 +109,7 @@ class AdmittanceControlNode(Node):
             return
         # compute control
         q = np.array(self.lbr_state_.measured_joint_position.tolist())
-
-        if len(self.joint_position_buffer_) > self.joint_position_buffer_len_:
-            self.joint_position_buffer_.pop(0)
-        self.joint_position_buffer_.append(q)
-
-        q = np.zeros_like(q)
-        for qi in self.joint_position_buffer_:
-            q += qi / len(self.joint_position_buffer_)
-
         tau_ext = np.array(self.lbr_state_.external_torque.tolist())
-
-        if len(self.external_torque_buffer_) > self.external_torque_buffer_len_:
-            self.external_torque_buffer_.pop(0)
-        self.external_torque_buffer_.append(tau_ext)
-
-        tau_ext = np.zeros_like(tau_ext)
-        for tau_ext_i in self.external_torque_buffer_:
-            tau_ext += tau_ext_i / len(self.external_torque_buffer_)
 
         dq, f_ext = self.controller_(q, tau_ext)
 

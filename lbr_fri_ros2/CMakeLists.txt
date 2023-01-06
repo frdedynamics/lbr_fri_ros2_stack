@@ -10,6 +10,7 @@ find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(realtime_tools REQUIRED)
 find_package(std_srvs REQUIRED)
+find_package(filters REQUIRED)
 find_package(lbr_fri_msgs REQUIRED)
 find_package(fri REQUIRED)
 
@@ -17,6 +18,7 @@ add_library(lbr_fri_ros2
   SHARED 
     src/lbr_app_node.cpp
     src/lbr_client.cpp
+    src/lbr_state_mean_filter.cpp
     src/lbr.cpp
 )
 
@@ -28,6 +30,7 @@ ament_target_dependencies(${PROJECT_NAME}
   rclcpp
   realtime_tools
   std_srvs
+  filters
   lbr_fri_msgs
   fri
 )
@@ -37,6 +40,7 @@ ament_export_dependencies(
   rclcpp
   realtime_tools
   std_srvs
+  filters
   lbr_fri_msgs
   fri
 )
@@ -61,8 +65,17 @@ ament_target_dependencies(lbr_spinner
   rclcpp
 )
 
+add_executable(lbr_state_mean_filter_node src/lbr_state_mean_filter_node.cpp)
+target_include_directories(lbr_state_mean_filter_node PRIVATE include)
+target_link_libraries(lbr_state_mean_filter_node ${PROJECT_NAME})
+ament_target_dependencies(lbr_state_mean_filter_node
+  rclcpp
+  filters
+  lbr_fri_msgs
+)
+
 install(
-  TARGETS lbr_spinner
+  TARGETS lbr_spinner lbr_state_mean_filter_node
   RUNTIME DESTINATION lib/${PROJECT_NAME}
 )
 
