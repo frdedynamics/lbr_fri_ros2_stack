@@ -15,11 +15,13 @@ class LBRPDControlNode(Node):
         self.declare_parameter("sampling_frequency", 100)
         self.declare_parameter("K", 1.)
         self.declare_parameter("D", 0.)
+        self.declare_parameter("G", 0.)
         freq = int(self.get_parameter("sampling_frequency").value)
-        self.dt = 1./float(freq)        
+        self.dt = 1./float(freq)
         self.K = float(self.get_parameter("K").value)
         self.D = float(self.get_parameter("D").value)
-        
+        self.G = float(self.get_parameter("G").value)
+
         # Create publishers/subscribers
         self.lbr_command_publisher = self.create_publisher(
             LBRCommand, "/lbr_command/out", 1
@@ -33,6 +35,7 @@ class LBRPDControlNode(Node):
 
         self.q_curr = None
         self.dq_curr = None
+        self.ddq_curr = None
         self.lbr_state_sub_ = self.create_subscription(
             LBRState, "/lbr_state", self.lbr_state_callback, qos.qos_profile_system_default
         )
@@ -41,10 +44,17 @@ class LBRPDControlNode(Node):
         self.create_timer(self.dt, self.timer_callback)
 
     def lbr_state_callback(self, msg):
+        dt = float(msg.sample_time)
         q_now = np.array(msg.measured_joint_position)
         if self.q_curr is not None:
-            dt = float(msg.sample_time)
-            self.dq_curr = (q_now - self.q_curr)/dt
+
+            dq_curr_now = (q_now - self.q_curr)/dt
+
+            if self.dq_curr is not None:
+                self.ddq_curr = (dq_curr_now - self.dq_curr)/dt
+
+            self.dq_curr = dq_curr_now
+
         self.q_curr = q_now.copy()
 
     def lbr_command_callback(self, msg):
@@ -53,19 +63,21 @@ class LBRPDControlNode(Node):
     def timer_callback(self):
         if self.dq_curr is None: return
         if self.q_goal is None: return
+        if self.ddq_curr is None: return
 
         q_curr = self.q_curr.copy()
         dq_curr = self.dq_curr.copy()
+        ddq_curr = self.ddq_curr.copy()
 
         q_goal = self.q_goal.copy()
 
-        dq_cmd = self.K*(q_goal - q_curr) - self.D*dq_curr
+        dq_cmd = self.K*(q_goal - q_curr) - self.D*dq_curr - self.G*ddq_curr
 
         q_cmd = q_curr + self.dt*dq_cmd
 
         command = LBRCommand(joint_position=q_cmd.tolist())
         self.lbr_command_publisher.publish(command)
-        
+
 def main():
     rclpy.init()
     rclpy.spin(LBRPDControlNode())
@@ -73,4 +85,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-    
