@@ -57,7 +57,7 @@ class LBRPDControlNode(Node):
         q_curr = self.q_curr.copy()
         dq_curr = self.dq_curr.copy()
 
-        q_goal = np.array(msg.joint_position)
+        q_goal = self.q_goal.copy()
 
         dq_cmd = self.K*(q_goal - q_curr) - self.D*dq_curr
 
