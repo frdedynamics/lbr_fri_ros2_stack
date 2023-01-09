@@ -67,6 +67,11 @@ install(
 )
 
 install(
+  PROGRAMS scripts/lbr_pd_control.py
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+install(
   DIRECTORY launch
   DESTINATION share/${PROJECT_NAME}
 )
