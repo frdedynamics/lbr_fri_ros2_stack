@@ -53,3 +53,11 @@ Additional resources can be found on the school's [Sharepoint](https://emckclac.
 
 # Notes
 Note that this repository is based on the [IIWA Stack](https://github.com/IFL-CAMP/iiwa_stack), which offers similar functionality. This repository, however, adds real time communication support and the medical versions of the KUKA LBR.
+
+
+# Troubleshooting
+When the client PC does not connect to the controller, check out the communcation in wireshark. 
+If there are UDP messages from the controller but nothing from the client PC, it might be a firewall problem. Use this command (Ubuntu 20.04) to setup your firewall:
+ ```shell
+sudo ufw allow proto udp from 172.31.1.147 to 172.31.1.148 port 30200
+```
